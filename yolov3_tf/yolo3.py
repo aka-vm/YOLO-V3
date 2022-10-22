@@ -10,11 +10,11 @@ from keras.layers import Layer, Conv2D, BatchNormalization, LeakyReLU, UpSamplin
 class ConvBlock(Conv2D):
 
     def __init__(self, output_filters, kernel_size, normalize=True, downsample=False, **kwargs):
-        strides, padding = (2, 'valid') if downsample else (1, 'same')
-        super(ConvBlock, self).__init__(output_filters, kernel_size, strides, padding, **kwargs)
+        strides, padding = (2, 'same') if downsample else (1, 'same')
+        super(ConvBlock, self).__init__(output_filters, kernel_size, strides=strides, padding=padding, **kwargs)
+        self.normalize = normalize
         if normalize:
             self.use_bias = False
-            self.normalize = normalize
             self.bn = BatchNormalization()
             self.lrelu = tf.nn.leaky_relu
 
@@ -52,12 +52,12 @@ class ConvPassBlock(Layer):
 
     def __init__(self, output_filters, **kwargs):
         super(ConvPassBlock, self).__init__(**kwargs)
-        layers = Sequential([
-            ConvBlock(output_filters//2, 1),
-            ConvBlock(output_filters, 3),
-            ConvBlock(output_filters//2, 1),
-            ConvBlock(output_filters, 3),
-            ConvBlock(output_filters//2, 1),
+        self.layers = Sequential([
+            ConvBlock(output_filters, 1),
+            ConvBlock(output_filters*2, 3),
+            ConvBlock(output_filters, 1),
+            ConvBlock(output_filters*2, 3),
+            ConvBlock(output_filters, 1),
         ])
 
     def call(self, inputs):
@@ -124,24 +124,38 @@ class YOLOv3(Model):
         x = ResidualBlock(FILTELS*32, repetes=4)(x)
         # Darknet53 Ends
 
-        x = ConvPassBlock(FILTELS*32)(x)
-        outputs.append(OutputBlock(FILTELS*32, self.num_classes)(x))    # Output 1 (13, 13, 3, 5+n_classes)
-
-        x = ConvBlock(FILTELS*16, 1)(x)
-        x = UpSampling2D(2)(x)
-        x = Concatenate()([x, routes.pop()])
         x = ConvPassBlock(FILTELS*16)(x)
-        outputs.append(OutputBlock(FILTELS*16, self.num_classes)(x))    # Output 2 (26, 26, 3, 5+n_classes)
+        # Output 1 (13, 13, 3, 5+n_classes)
+        outputs.append(OutputBlock(FILTELS*32, self.num_classes)(x))
 
+        # 7st block (13, 13, 512) -> (26, 26, 512)
         x = ConvBlock(FILTELS*8, 1)(x)
         x = UpSampling2D(2)(x)
-        x = Concatenate()([x, routes.pop()])
+        x = Concatenate()([x, routes.pop(-1)])
         x = ConvPassBlock(FILTELS*8)(x)
-        outputs.append(OutputBlock(FILTELS*8, self.num_classes)(x))     # Output 3 (52, 52, 3, 5+n_classes)
+        # Output 2 (26, 26, 3, 5+n_classes)
+        outputs.append(OutputBlock(FILTELS*16, self.num_classes)(x))
+
+        # 8st block (26, 26, 256) -> (52, 52, 256)
+        x = ConvBlock(FILTELS*4, 1)(x)
+        x = UpSampling2D(2)(x)
+        x = Concatenate()([x, routes.pop(-1)])
+        x = ConvPassBlock(FILTELS*4)(x)
+        # Output 3 (52, 52, 3, 5+n_classes)
+        outputs.append(OutputBlock(FILTELS*8, self.num_classes)(x))
 
         return outputs
 
 
-
-
-
+if __name__ == "__main__":
+    model = YOLOv3(input_shape=(416, 416, 3), num_classes=80, name="YOLOv3")
+    model.summary()
+    plot_location = "./YOLOv3-tf.png"
+    tf.keras.utils.plot_model(
+                    model,
+                    to_file=plot_location,
+                    show_shapes=True,
+                    show_layer_names=False,
+                    expand_nested=False,
+                    dpi=256
+    )
