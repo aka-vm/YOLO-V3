@@ -3,7 +3,7 @@ from tensorflow.keras import Model
 from tensorflow.keras.models import Sequential
 from keras.layers import Layer, Conv2D, BatchNormalization, LeakyReLU, UpSampling2D, Add, Concatenate
 
-
+from  .utils import PASCAL_ANCHORS
 # Conv2d layer with optional batch normalization and leaky relu
 
 
@@ -15,29 +15,28 @@ class ConvBlock(Conv2D):
         self.normalize = normalize
         if normalize:
             self.use_bias = False
-            self.bn = BatchNormalization()
+            self.bn = tf.nn.batch_normalization
             self.lrelu = tf.nn.leaky_relu
 
     def call(self, inputs):
-        conv_layer = super(ConvBlock, self).call(inputs)
+        x = super(ConvBlock, self).call(inputs)
         if self.normalize:
-            bn_layer = self.bn(conv_layer)
-            ac_layer = self.lrelu(bn_layer, alpha=0.1)
-            return ac_layer
-        else:
-            return conv_layer
+            mena, variance = tf.nn.moments(x, axes=[0, 1, 2])
+            x = self.bn(x, mena, variance, offset=None, scale=None, variance_epsilon=1e-5)
+            x = self.lrelu(x, alpha=0.1)
+        return x
 
 
 class ResidualBlock(Layer):
 
-    def __init__(self, output_filters:int, repetes:int = 1, **kwargs):
+    def __init__(self, filters:int, repetes:int = 1, **kwargs):
         super(ResidualBlock, self).__init__(**kwargs)
-        self.output_filters = output_filters
+        self.filters = filters
         self.repetes = repetes
         self.layes = [
             Sequential([
-                ConvBlock(output_filters//2, 1),
-                ConvBlock(output_filters, 3)
+                ConvBlock(filters//2, 1),
+                ConvBlock(filters, 3)
             ])
         ]
 
@@ -50,14 +49,14 @@ class ResidualBlock(Layer):
 
 class ConvPassBlock(Layer):
 
-    def __init__(self, output_filters, **kwargs):
+    def __init__(self, filters, **kwargs):
         super(ConvPassBlock, self).__init__(**kwargs)
         self.layers = Sequential([
-            ConvBlock(output_filters, 1),
-            ConvBlock(output_filters*2, 3),
-            ConvBlock(output_filters, 1),
-            ConvBlock(output_filters*2, 3),
-            ConvBlock(output_filters, 1),
+            ConvBlock(filters, 1),
+            ConvBlock(filters*2, 3),
+            ConvBlock(filters, 1),
+            ConvBlock(filters*2, 3),
+            ConvBlock(filters, 1),
         ])
 
     def call(self, inputs):
@@ -87,12 +86,14 @@ class YOLOv3(Model):
     def __init__(
         self,
         input_shape=(416, 416, 3),
-        num_classes=None,
+        num_classes:int = None,
         initial_filters=32,
+        anchors=None,
         **kwargs
     ):
         self.num_classes = num_classes
         self.initial_filters = initial_filters
+        self.anchors = anchors or PASCAL_ANCHORS
 
         input_layer = tf.keras.Input(shape=input_shape)
         outputs = self._create_model_layers(input_layer)
