@@ -2,9 +2,14 @@ from operator import mod
 import tensorflow as tf
 from tensorflow.keras import Model
 from tensorflow.keras.models import Sequential
-from keras.layers import Layer, Conv2D, UpSampling2D, Add, Concatenate
+# from keras.layers import Layer, Conv2D, UpSampling2D, Add, Concatenate
+from tensorflow.keras.layers import Layer, Conv2D, UpSampling2D, Add, Concatenate
 
-from utils import PASCAL_ANCHORS
+from utils import (
+    PASCAL_ANCHORS,
+    anchor_box_convert,
+
+    )
 # Conv2d layer with optional batch normalization and leaky relu
 
 
@@ -20,7 +25,7 @@ class ConvBlock(Conv2D):
             self.lrelu = tf.nn.leaky_relu
 
     def call(self, inputs):
-        x = super(ConvBlock, self).call(inputs)
+        x = self.convolution_op(inputs, self.kernel)
         if self.normalize:
             mena, variance = tf.nn.moments(x, axes=[0, 1, 2])
             x = self.bn(x, mena, variance, offset=None, scale=None, variance_epsilon=1e-5)
@@ -89,17 +94,20 @@ class YOLOv3(Model):
         input_shape=(416, 416, 3),
         num_classes:int = None,
         initial_filters=32,
+        base_output_scale=(13, 13),
         anchors=None,
         **kwargs
     ):
         super().__init__(**kwargs)
+        self._input_shape = input_shape
 
         self.num_classes = num_classes
-        self.initial_filters = initial_filters
-        self.anchors = anchors or PASCAL_ANCHORS
+        self._initial_filters = initial_filters
+        self.output_scales = [(base_output_scale[0]*2**i, base_output_scale[1]*2**i) for i in range(3)]
+        anchors = anchors or PASCAL_ANCHORS
+        self.anchors = anchor_box_convert(anchors, self.output_scales)
 
-        input_layer = tf.keras.Input(shape=input_shape)
-        self._model_layers = self._create_model_layers()
+        self._model_layers = self._create_model()
 
     def call(self, inputs):
         outputs = []
@@ -119,13 +127,17 @@ class YOLOv3(Model):
 
         return outputs
 
+    def summary(self):
+        x = tf.keras.Input(shape=(self._input_shape))
+        model = Model(inputs=[x], outputs=self.call(x))
+        return model.summary()
 
-    def _create_model_layers(self):
-        FILTELS = self.initial_filters
+    def _create_model(self):
+        FILTELS = self._initial_filters
         layers = dict(
             conv_1              = ConvBlock(FILTELS, 3, name='conv_1'),
             downsample_conv_1   = ConvBlock(FILTELS*2, 3, downsample=True, name='downsample_conv_1'),
-            residual_block_1    = ResidualBlock(FILTELS*2, name='residual_block_1'),
+            residual_block_1    = ResidualBlock(FILTELS*2, repetes=1, name='residual_block_1'),
             downsample_conv_2   = ConvBlock(FILTELS*4, 3, downsample=True, name='downsample_conv_2'),
             residual_block_2    = ResidualBlock(FILTELS*4, repetes=2, name='residual_block_2'),
             downsample_conv_3   = ConvBlock(FILTELS*8, 3, downsample=True, name='downsample_conv_3'),
@@ -162,24 +174,22 @@ if __name__ == "__main__":
     model = YOLOv3(input_shape=(IMAGE_SIZE, IMAGE_SIZE, 3), num_classes=num_classes, initial_filters=initial_filters, name='YOLOv3')
 
     inputs = tf.random.normal((2, IMAGE_SIZE, IMAGE_SIZE, 3))
-    # op = model(inputs)
+    op = model(inputs)
 
-    # assert op[0].shape == (2, 3, IMAGE_SIZE//32, IMAGE_SIZE//32, num_classes + 5)
-    # assert op[1].shape == (2, 3, IMAGE_SIZE//16, IMAGE_SIZE//16, num_classes + 5)
-    # assert op[2].shape == (2, 3, IMAGE_SIZE//8, IMAGE_SIZE//8, num_classes + 5)
-
-    # model.summary()
+    assert op[0].shape == (2, 3, IMAGE_SIZE//32, IMAGE_SIZE//32, num_classes + 5)
+    assert op[1].shape == (2, 3, IMAGE_SIZE//16, IMAGE_SIZE//16, num_classes + 5)
+    assert op[2].shape == (2, 3, IMAGE_SIZE//8, IMAGE_SIZE//8, num_classes + 5)
 
     model.build(input_shape=(None, IMAGE_SIZE, IMAGE_SIZE, 3))
     model.summary()
 
-    plot_name = './YOLOv3-tf.png'
-    tf.keras.utils.plot_model(
-        model,
-        plot_name,
-        show_shapes=True,
-        show_layer_names=True,
-        rankdir='TB',
-        expand_nested=True,
-        dpi=256
-        )
+
+    # plot_name = './YOLOv3-tf.png'
+    # tf.keras.utils.plot_model(
+    #     model,
+    #     plot_name,
+    #     show_shapes=True,
+    #     show_layer_names=True,
+    #     expand_nested=True,
+    #     dpi=256
+    #     )
