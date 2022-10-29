@@ -20,3 +20,14 @@ The training datasets used are the [COCO 2017](https://cocodataset.org/#home) da
 | Pytorch Implimentation       | ❌ |
 <!-- | Training on Pascal Voc Data  | ❌ | -->
 <!-- | Training on MS-COCO Data     | ❌ | -->
+
+## YOLOv3 paper
+The code implementation is based on the [YOLO-V3](https://arxiv.org/abs/1804.02767) paper by Joseph Redmon and Ali Farhadi.
+
+#### Please Note:
+* In the original YOLO-V3 paper, things were somewhat unclear to me since they were not well defined as the previous(YOLO Family) papers. In some places, I referred to previous papers.
+
+* I've also taken inspiration from [Aladdin Persson](https://www.linkedin.com/in/aladdin-persson-a95384153/)'s [YT Video](https://www.youtube.com/watch?v=Grir6TZbc1M) and [Ayoosh Kathuria](https://www.linkedin.com/in/ayoosh-kathuria-44a319132/)'s [blog(s)](https://www.kdnuggets.com/2018/05/implement-yolo-v3-object-detector-pytorch-part-1.html). I also made some assumptions and changes.
+
+<!-- I'll be explaining each and everything -->
+
