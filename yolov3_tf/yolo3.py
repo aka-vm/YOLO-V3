@@ -1,4 +1,3 @@
-from operator import mod
 import tensorflow as tf
 from tensorflow.keras import Model
 from tensorflow.keras.models import Sequential
@@ -6,10 +5,14 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Layer, Conv2D, UpSampling2D, Add, Concatenate
 
 from utils import (
-    PASCAL_ANCHORS,
     anchor_box_convert,
-
     )
+from config import (
+    ANCHORS,
+    NUM_CLASSES,
+    CLASS_LABELS
+)
+
 # Conv2d layer with optional batch normalization and leaky relu
 
 
@@ -27,8 +30,8 @@ class ConvBlock(Conv2D):
     def call(self, inputs):
         x = self.convolution_op(inputs, self.kernel)
         if self.normalize:
-            mena, variance = tf.nn.moments(x, axes=[0, 1, 2])
-            x = self.bn(x, mena, variance, offset=None, scale=None, variance_epsilon=1e-5)
+            mean, variance = tf.nn.moments(x, axes=[0, 1, 2])
+            x = self.bn(x, mean, variance, offset=None, scale=None, variance_epsilon=1e-5)
             x = self.lrelu(x, alpha=0.1)
         return x
 
@@ -49,7 +52,8 @@ class ResidualBlock(Layer):
     def call(self, inputs):
         x = inputs
         for layer in self.layes:
-            x = Add()([x, layer(x)])
+            # x = Add()([x, layer(x)])
+            x = tf.math.add(x, layer(x))
         return x
 
 
@@ -104,7 +108,7 @@ class YOLOv3(Model):
         self.num_classes = num_classes
         self._initial_filters = initial_filters
         self.output_scales = [(base_output_scale[0]*2**i, base_output_scale[1]*2**i) for i in range(3)]
-        anchors = anchors or PASCAL_ANCHORS
+        anchors = anchors or ANCHORS
         self.anchors = anchor_box_convert(anchors, self.output_scales)
 
         self._model_layers = self._create_model()
@@ -121,7 +125,8 @@ class YOLOv3(Model):
 
             x = layer(x)
             if isinstance(layer, UpSampling2D):
-                x = Concatenate()([x, route_layers.pop()])
+                # x = Concatenate()([x, route_layers.pop()])
+                x = tf.concat([x, route_layers.pop()], axis=-1)
             elif isinstance(layer, ResidualBlock) and layer.repetes == 8:
                 route_layers.append(x)
 
@@ -168,9 +173,11 @@ class YOLOv3(Model):
 
 
 if __name__ == "__main__":
-    num_classes = 20
+    num_classes = NUM_CLASSES
+    class_labels = CLASS_LABELS
     IMAGE_SIZE = 416
     initial_filters = 32
+
     model = YOLOv3(input_shape=(IMAGE_SIZE, IMAGE_SIZE, 3), num_classes=num_classes, initial_filters=initial_filters, name='YOLOv3')
 
     inputs = tf.random.normal((2, IMAGE_SIZE, IMAGE_SIZE, 3))
@@ -180,7 +187,6 @@ if __name__ == "__main__":
     assert op[1].shape == (2, 3, IMAGE_SIZE//16, IMAGE_SIZE//16, num_classes + 5)
     assert op[2].shape == (2, 3, IMAGE_SIZE//8, IMAGE_SIZE//8, num_classes + 5)
 
-    model.build(input_shape=(None, IMAGE_SIZE, IMAGE_SIZE, 3))
     model.summary()
 
 
