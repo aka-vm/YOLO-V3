@@ -8,7 +8,9 @@ from utils import (
     anchor_box_convert,
     )
 from config import (
-    ANCHORS
+    ANCHORS,
+    NUM_CLASSES,
+    CLASS_LABELS
 )
 
 # Conv2d layer with optional batch normalization and leaky relu
@@ -171,9 +173,11 @@ class YOLOv3(Model):
 
 
 if __name__ == "__main__":
-    num_classes = 80
+    num_classes = NUM_CLASSES
+    class_labels = CLASS_LABELS
     IMAGE_SIZE = 416
     initial_filters = 32
+
     model = YOLOv3(input_shape=(IMAGE_SIZE, IMAGE_SIZE, 3), num_classes=num_classes, initial_filters=initial_filters, name='YOLOv3')
 
     inputs = tf.random.normal((2, IMAGE_SIZE, IMAGE_SIZE, 3))
