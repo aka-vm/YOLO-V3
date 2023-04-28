@@ -88,7 +88,7 @@ class OutputBlock(Layer):
         op = self.layer(inputs)
         op_shape = tf.shape(op)
         op = tf.reshape(op, (op_shape[0], op_shape[1], op_shape[2], self.num_anchors, 5+self.num_classes))      #(batch, h, w, n_anchors, 5+classes)
-        return tf.transpose(op, (0, 3, 1, 2, 4))
+        return tf.transpose(op, (0, 3, 1, 2, 4))    # (batch, n_anchors, h, w, 5+classes)
 
 
 class YOLOv3(Model):
