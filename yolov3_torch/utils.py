@@ -1,4 +1,5 @@
 import numpy as np
+from torch import nn
 
 def anchor_box_convert(anchor_boxes, output_frame_size=((13, 13), (26, 26), (52, 52))):
     anchor_boxes = np.array(anchor_boxes)
@@ -18,3 +19,11 @@ def iou_area(box1_dims, box2_dims):
     union = box1_dims.prod(axis=-1) + box2_dims.prod(axis=-1) - intersection
 
     return intersection / union
+
+class MaxPoolStride1(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x):
+        x = nn.functional.max_pool2d(nn.functional.pad(x, (0,1,0,1), mode='replicate'), 2, stride=1)
+        return x

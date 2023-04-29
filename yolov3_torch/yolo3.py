@@ -9,7 +9,8 @@ from torchinfo import summary
 import math
 
 from utils import (
-    anchor_box_convert
+    anchor_box_convert,
+    MaxPoolStride1
 )
 from config import (
     ANCHORS,
@@ -269,7 +270,7 @@ class TinyYOLOv3(nn.Module):
                 continue
 
             x = layer(x)
-            if i == 4:
+            if i == 3:
                 route_1 = x
             elif isinstance(layer, nn.Upsample):
                 x = torch.cat((x, route_1), dim=1)
@@ -299,9 +300,9 @@ class TinyYOLOv3(nn.Module):
             self._ConvMaxPollBlock(in_channels=3, out_channels=FILTERS),
             self._ConvMaxPollBlock(in_channels=FILTERS, out_channels=FILTERS*2),
             self._ConvMaxPollBlock(in_channels=FILTERS*2, out_channels=FILTERS*4),
-            self._ConvMaxPollBlock(in_channels=FILTERS*4, out_channels=FILTERS*8),
-            self._ConvMaxPollBlock(in_channels=FILTERS*8, out_channels=FILTERS*16), # Route 1
-            self._ConvMaxPollBlock(in_channels=FILTERS*16, out_channels=FILTERS*32, max_poll_stride="same"),
+            self._ConvMaxPollBlock(in_channels=FILTERS*4, out_channels=FILTERS*8),      # route_1
+            self._ConvMaxPollBlock(in_channels=FILTERS*8, out_channels=FILTERS*16),
+            self._ConvMaxPollBlock(in_channels=FILTERS*16, out_channels=FILTERS*32, use_max_poll_stride=1),
             ConvBlock(in_channels=FILTERS*32, out_channels=FILTERS*64, kernel_size=3),
         # Darknet-19 ends
             ConvBlock(in_channels=FILTERS*64, out_channels=FILTERS*16, kernel_size=1),
@@ -310,7 +311,7 @@ class TinyYOLOv3(nn.Module):
             ConvBlock(in_channels=FILTERS*16, out_channels=FILTERS*8, kernel_size=1),
             nn.Upsample(scale_factor=2), # Route 1
             # Join 1
-            self._OutputBlock(in_channels=FILTERS*24, channels=FILTERS*16, num_classes=self._num_classes),
+            self._OutputBlock(in_channels=FILTERS*16, channels=FILTERS*16, num_classes=self._num_classes),
         ])
 
         return layers
@@ -326,12 +327,13 @@ class TinyYOLOv3(nn.Module):
             self,
             in_channels: int,
             out_channels: int,
-            max_poll_stride: int=2
+            use_max_poll_stride: int=2,
         ):
+            MaxPoll = nn.MaxPool2d(kernel_size=2, stride=2) if use_max_poll_stride==2 else MaxPoolStride1()
             super().__init__()
             self._layers = nn.Sequential(
                 ConvBlock(in_channels, out_channels, 3),
-                nn.MaxPool2d(kernel_size=2, stride=max_poll_stride)
+                MaxPoll
             )
 
         def forward(self, x):
@@ -388,7 +390,7 @@ if __name__ == "__main__":
     # model.summary(verbose=1)
     print("\n")
 
-    model = TinyYOLOv3(input_shape, num_classes, initial_filters)
+    model = TinyYOLOv3(input_shape, num_classes, 16)
     out = model(x)
 
     assert out[0].shape == (2, 3, IMAGE_SIZE//32, IMAGE_SIZE//32, 5 + num_classes)
