@@ -3,3 +3,4 @@ yolo3-tiny.ini
 /.DS_Store
 __pycache__
 *.ignore.*
+.python-version
