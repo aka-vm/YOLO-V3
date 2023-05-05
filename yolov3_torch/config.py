@@ -1,3 +1,6 @@
+import albumentations as A
+from albumentations.pytorch.transforms import ToTensorV2
+
 import os
 import pathlib
 
@@ -34,6 +37,48 @@ ANCHORS = [
     [(0.072,0.147), (0.149,0.108), (0.142,0.286)],      # 30,61,  62,45,  59,119
     [(0.024,0.031), (0.038,0.072), (0.079,0.055)],      # 10,13,  16,30,  33,23
 ]
+
+scale = 1.1
+train_transforms = A.Compose(
+    [
+        A.ToGray(p=0.1),
+        A.Blur(p=0.1),
+        A.ColorJitter(brightness=0.6, contrast=0.6, saturation=0.6, hue=0.6, p=0.4),
+        A.CLAHE(p=0.1),
+        A.Posterize(p=0.1),
+        A.ChannelShuffle(p=0.05),
+
+        A.HorizontalFlip(p=0.5),
+        # A.VerticalFlip(p=0.5),     #
+        A.OneOf([
+            A.ShiftScaleRotate(rotate_limit=20, p=0.5, border_mode=0),
+            A.Affine(shear=20, p=0.5, mode=0),
+        ], p=1.0),
+        A.RandomCrop(height=IMAGE_SIZE, width=IMAGE_SIZE),
+
+        A.LongestMaxSize(max_size=int(IMAGE_SIZE * scale)),
+        A.PadIfNeeded(
+            min_height=int(IMAGE_SIZE * scale),
+            min_width=int(IMAGE_SIZE * scale),
+            border_mode=0,
+        ),
+        A.Normalize(mean=[0, 0, 0], std=[1, 1, 1], max_pixel_value=255,),
+        ToTensorV2(),
+    ],
+    bbox_params=A.BboxParams(format='yolo', min_visibility=0.4, label_fields=[],),
+)
+
+test_transforms = A.Compose(
+    [
+        A.LongestMaxSize(max_size=IMAGE_SIZE),
+        A.PadIfNeeded(
+            min_height=IMAGE_SIZE, min_width=IMAGE_SIZE, border_mode=cv2.BORDER_CONSTANT
+        ),
+        A.Normalize(mean=[0, 0, 0], std=[1, 1, 1], max_pixel_value=255,),
+        ToTensorV2(),
+    ],
+    bbox_params=A.BboxParams(format="yolo", min_visibility=0.4, label_fields=[]),
+)
 
 CLASS_LABELS_DICT = {
     "COCO": [

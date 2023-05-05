@@ -10,7 +10,6 @@ import math
 
 from utils import (
     anchor_box_convert,
-    MaxPoolStride1
 )
 from config import (
     ANCHORS,
