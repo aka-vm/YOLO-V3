@@ -1,7 +1,24 @@
-import numpy as np
+import torch
 from torch import nn
 
-def anchor_box_convert(anchor_boxes, output_frame_size=((13, 13), (26, 26), (52, 52))):
+import numpy as np
+
+def anchor_box_convert(anchor_boxes: list[list[tuple[float, float]]], output_frame_size=((13, 13), (26, 26), (52, 52))):
+    """
+    Process anchor boxes to be relative to the output frame size.
+
+    Parameters:
+        anchor_boxes:
+            Matrix of tuples of floats(0-1) representing the anchor box size
+            ratio w.r.t. the original input image size.
+
+        output_frame_size: list of tuples of ints representing the output
+        frame size, depending on the YOLO layer.
+
+    Returns:
+        Matrix of tuples of floats(0-output_frame_size[i][j]) representing
+        the anchor box size w.r.t. the output frame size.
+    """
     anchor_boxes = np.array(anchor_boxes)
 
     output = []
@@ -14,11 +31,16 @@ def anchor_box_convert(anchor_boxes, output_frame_size=((13, 13), (26, 26), (52,
     return np.array(output)
 
 
-def iou_area(box1_dims, box2_dims):
-    intersection = np.minimum(box1_dims, box2_dims).prod(axis=-1)
-    union = box1_dims.prod(axis=-1) + box2_dims.prod(axis=-1) - intersection
+def iou(boxes1_dims, boxes2_dims):
+    # intersection = np.minimum(box1_dims, box2_dims).prod(axis=-1)
+    intersection = torch.min(boxes1_dims, boxes2_dims).prod(axis=-1)
+    # union = box1_dims.prod(axis=-1) + box2_dims.prod(axis=-1) - intersection
+    union = boxes1_dims.prod(axis=-1) + boxes2_dims.prod(axis=-1) - intersection
 
     return intersection / union
+
+def cells_to_bboxes(predictions, anchors, S, is_preds=True):
+    pass
 
 class MaxPoolStride1(nn.Module):
     def __init__(self):

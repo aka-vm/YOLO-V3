@@ -16,6 +16,7 @@ NUM_CLASSES_DICT = {
 
 # DATASET = 'COCO'
 DATASET = 'PASCAL_VOC'
+DATASET_PATH = BASE_DATASET_DIR_PATH / DATASET
 
 BATCH_SIZE = 32
 IMAGE_SIZE = 416
@@ -72,7 +73,7 @@ test_transforms = A.Compose(
     [
         A.LongestMaxSize(max_size=IMAGE_SIZE),
         A.PadIfNeeded(
-            min_height=IMAGE_SIZE, min_width=IMAGE_SIZE, border_mode=cv2.BORDER_CONSTANT
+            min_height=IMAGE_SIZE, min_width=IMAGE_SIZE, border_mode=0
         ),
         A.Normalize(mean=[0, 0, 0], std=[1, 1, 1], max_pixel_value=255,),
         ToTensorV2(),
