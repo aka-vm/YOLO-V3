@@ -1,6 +1,6 @@
-# YOLO-V3 TensorFlow
+# YOLO-V3 Pytorch
 
-TensorFlow implimentation of YOLO-V3.
+Pytorch implimentation of YOLO-V3.
 
 ## Progress Table
 <!-- * ✅ - Completed
@@ -10,6 +10,6 @@ TensorFlow implimentation of YOLO-V3.
 | Syntax      | Progress |
 | ----------- | ----------- |
 | Base Model Code              | ✅ |
-| Training on Pascal Voc Data  | ❌ |
+| Training on Pascal Voc Data  | 🟡 |
 | Training on MS-COCO Data     | ❌ |
 | Exporting as Reuseable Model | ❌ |

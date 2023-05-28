@@ -17,6 +17,6 @@ The training datasets used are the [COCO 2017](https://cocodataset.org/#home) da
 | Syntax      | Progress |
 | ----------- | ----------- |
 | [TensorFlow Implimentation ](yolov3_tf/Readme.md)   | 🟡 |
-| Pytorch Implimentation       | ❌ |
+| [Pytorch Implimentation ](yolov3_torch/Readme.md)   | 🟡 |
 <!-- | Training on Pascal Voc Data  | ❌ | -->
 <!-- | Training on MS-COCO Data     | ❌ | -->
