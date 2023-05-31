@@ -17,13 +17,21 @@ def scale_anchor_boxes(anchor_boxes: list[list[tuple[float, float]]], output_sca
         anchor_boxes:
             Matrix of tuples of floats(0-1) representing the anchor box size
             ratio w.r.t. the original input image size.
+            e.g. -> config.ANCHORS
+                [
+                    [(0.1, 0.2), (0.3, 0.4), (0.5, 0.6)],
+                    [(0.7, 0.8), (0.9, 0.1), (0.2, 0.3)],
+                    [(0.4, 0.5), (0.6, 0.7), (0.8, 0.9)]
+                ]
 
-        output_scales: list of ints or list of tuple(scale_h, scale_w) representing the output
-        frame size, depending on the YOLO layer.
+        output_scales:
+            list of ints or list of tuple(scale_h, scale_w) representing the
+            outputframe size, depending on the YOLO layer.
 
     Returns:
-        Matrix of tuples of floats(0-output_scale_size) representing
+        Matrix of tuples of floats(0, output_scale_size) representing
         the anchor box size w.r.t. the output frame size.
+        output[i][j] = anchor_boxes[i][j] * output_scales[i]
     """
     anchor_boxes = torch.tensor(anchor_boxes)
     output_scales = torch.tensor(output_scales)
@@ -167,7 +175,7 @@ def cells_to_bboxes(predictions, anchors, S, is_preds=True):
         scores      = predictions[..., 0:1]
         best_class  = predictions[..., 5:6]
 
-    cell_indices = torch.arange(S).repeat(2, num_anchors, S, 1).unsqueeze(-1).to(predictions.device)
+    cell_indices = torch.arange(S).repeat(N, num_anchors, S, 1).unsqueeze(-1).to(predictions.device)
 
     # wrt the image
     x = (bboxes_coordinates[..., 0:1] + cell_indices) / S

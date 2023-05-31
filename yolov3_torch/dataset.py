@@ -15,8 +15,8 @@ from utils import (
     cells_to_bboxes,
     iou_wh,
     scale_anchor_boxes,
-    # non_max_suppression as nms,
-    # plot_image
+    non_max_suppression as nms,
+    plot_image
 )
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
@@ -114,11 +114,28 @@ def test():
     scales = (13, 26, 52)
     scaled_anchors = scale_anchor_boxes(anchors, scales)
     data_loader = DataLoader(dataset=dataset, batch_size=1, shuffle=True)
-    for img, y in data_loader:
+    for img, bboxes in data_loader:    # bboxes is a tuple of 3 tensors
         boxes = []
 
-        for i in range(scaled_anchors[0].shape[1]):
-            pass
+        for i in range(bboxes[0].shape[1]):     # basically the number of different scales, like (13, 26, 52) in case of yoloV3
+            anchor = scaled_anchors[i]
+            boxes += cells_to_bboxes(
+                bboxes[i],
+                is_preds=False,
+                S=bboxes[i].shape[2],
+                anchors=anchor
+            )[0]
+        boxes = nms(boxes, base_prob_threshold=0.7, iou_threshold=1, box_format="midpoint")
+
+        objects = []
+        for box in boxes:
+            class_label = config.CLASS_LABELS[int(box[5])]
+            objects.append(class_label)
+
+        print(objects)
+        plot_image(img[0].permute(1, 2, 0).to("cpu"), boxes)
+        break       # just for testing
+
 
 
 if __name__ == "__main__":
