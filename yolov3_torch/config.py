@@ -49,6 +49,13 @@ train_transforms = A.Compose(
         A.Posterize(p=0.1),
         A.ChannelShuffle(p=0.05),
 
+        A.LongestMaxSize(max_size=int(IMAGE_SIZE * scale)),
+        A.PadIfNeeded(
+            min_height=int(IMAGE_SIZE * scale),
+            min_width=int(IMAGE_SIZE * scale),
+            border_mode=0,
+        ),
+
         A.HorizontalFlip(p=0.5),
         # A.VerticalFlip(p=0.5),     #
         A.OneOf([
@@ -57,12 +64,6 @@ train_transforms = A.Compose(
         ], p=1.0),
         A.RandomCrop(height=IMAGE_SIZE, width=IMAGE_SIZE),
 
-        A.LongestMaxSize(max_size=int(IMAGE_SIZE * scale)),
-        A.PadIfNeeded(
-            min_height=int(IMAGE_SIZE * scale),
-            min_width=int(IMAGE_SIZE * scale),
-            border_mode=0,
-        ),
         A.Normalize(mean=[0, 0, 0], std=[1, 1, 1], max_pixel_value=255,),
         ToTensorV2(),
     ],

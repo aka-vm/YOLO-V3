@@ -94,9 +94,10 @@ class YOLODataset(Dataset):
 
         return image, tuple(targets)
 
-def test():
+def test(return_loader=False):
     anchors = config.ANCHORS
     transform = config.test_transforms
+    transform = config.train_transforms
 
     dataset_path = config.DATASET_PATH
     csv_file = dataset_path / "8examples.csv"
@@ -114,6 +115,10 @@ def test():
     scales = (13, 26, 52)
     scaled_anchors = scale_anchor_boxes(anchors, scales)
     data_loader = DataLoader(dataset=dataset, batch_size=1, shuffle=True)
+
+    if return_loader:
+        return data_loader
+
     for img, bboxes in data_loader:    # bboxes is a tuple of 3 tensors
         boxes = []
 
