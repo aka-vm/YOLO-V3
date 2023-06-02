@@ -62,13 +62,15 @@ class YOLODataset(Dataset):
             bboxes = augmentations["bboxes"]
 
         # taking 3 scaled predictions from the YOLOv3 model #! Modify later to make it general
-        # targets shape - [tensor(3, s, s, 6),];
-        targets = [torch.zeros((self.num_anchors_per_scale, s, s, 6)) for s in self.scales]
+        # targets shape - [tensor(3, S, S, 6),];
+        targets = [torch.zeros((self.num_anchors_per_scale, S, S, 6)) for S in self.scales]
         #
         for box in bboxes:
             iou_anchors = iou_wh(torch.tensor(box[2:4]), self.anchors)
             anchors_rank = iou_anchors.argsort(descending=True, dim=0)
             x, y, w, h, class_label = box   # x, y, w, h are relative to the image size
+    # It is not mentioned that we take atleast one (the best) anchor box for each scale or overall.
+    # but I saw in some implementations that they take atleast one anchor box for each scale.
             scale_flag = [False, False, False]
             for i_anchor in anchors_rank:
                 i_scale = int(i_anchor / self.num_anchors_per_scale)
@@ -90,17 +92,21 @@ class YOLODataset(Dataset):
                     scale_flag[i_scale] = True
 
                 elif not target_anchor_taken and iou_anchors[i_anchor] > self.ignore_iou_thresh:
+    # It is written in the paper that if the anchor box is not best and has an IoU > 0.5 with the ground
+    # truth box. Then we don't penalize the confidence score of that anchor box. But we don't assign any
+    # objectness score to that anchor box either.
                     targets[i_scale][anchor_on_scale, i, j, 0] = -1 # will be ignored during loss calculation
 
         return image, tuple(targets)
 
-def test(return_loader=False):
+def test(return_loader=False, plot=True):
     anchors = config.ANCHORS
     transform = config.test_transforms
     transform = config.train_transforms
 
     dataset_path = config.DATASET_PATH
-    csv_file = dataset_path / "8examples.csv"
+    csv_file = dataset_path / "train.csv"
+    csv_file = dataset_path / "100examples.csv"
     img_dir = dataset_path / "images"
     label_dir = dataset_path / "labels"
     annotations = pd.read_csv(csv_file)
@@ -137,11 +143,12 @@ def test(return_loader=False):
             class_label = config.CLASS_LABELS[int(box[5])]
             objects.append(class_label)
 
-        print(objects)
-        plot_image(img[0].permute(1, 2, 0).to("cpu"), boxes)
-        break       # just for testing
+        # print(objects)
+        if plot:
+            plot_image(img[0].permute(1, 2, 0).to("cpu"), boxes)
+        # break       # just for single testing
 
 
 
 if __name__ == "__main__":
-    test()
+    test(plot=True)
