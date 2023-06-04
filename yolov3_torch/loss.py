@@ -74,7 +74,7 @@ class YoloLoss(nn.Module):
 
         self.lambda_noobj = 10
         self.lambda_obj = 1
-        self.lambda_coord = 5
+        self.lambda_box   = 5
         self.lambda_class = 1
 
 
@@ -94,3 +94,38 @@ class YoloLoss(nn.Module):
         prediction[...,1:3] = self.sigmoid(prediction[..., 1:3])            # x,y coordinates
         prediction[...,3:5] = torch.exp   (prediction[..., 3:5]) * anchors  # width, height
         prediction[...,5:]  = self.sigmoid(prediction[..., 5:])             # class probabilities
+
+        # Losses
+        # No Object Loss: should me least
+        noobj_loss = self.bce(
+            prediction[..., 0][noobj],
+            target    [..., 0][noobj]
+            )
+
+        # Object Loss
+        ious = iou_boxes(
+            prediction[..., 1: 5][obj],
+            target    [..., 1: 5][obj]
+        )
+        object_loss = self.bce(
+            prediction[..., 0:1][obj],
+            ious
+            )
+        # Box Coordinates Loss
+        box_loss = self.mse(
+            prediction[..., 1:5][obj],
+            target    [..., 1:5][obj]
+            )
+        # Class Loss #! check src
+        class_loss = self.ce(
+            prediction[..., 5:][obj],
+            target    [..., 5:][obj],
+        )
+
+
+        return (
+            self.lambda_noobj   * noobj_loss
+            + self.lambda_obj   * object_loss
+            + self.lambda_box   * box_loss
+            + self.lambda_class * class_loss
+        )
