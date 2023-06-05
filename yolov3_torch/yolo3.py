@@ -8,14 +8,7 @@ from torchinfo import summary
 
 import math
 
-from utils import (
-    anchor_box_convert,
-)
-from config import (
-    ANCHORS,
-    NUM_CLASSES,
-    CLASS_LABELS
-)
+import config
 
 
 class ConvBlock(nn.Module):
@@ -232,20 +225,30 @@ class YOLOv3(nn.Module):
 
         return layers
 
-if __name__ == "__main__":
-    num_classes = NUM_CLASSES
-    class_labels = CLASS_LABELS
-    IMAGE_SIZE = 416
-    initial_filters = 32
+def test(
+    num_classes: int = 20,
+    class_labels: list = None,
+    image_size: int = 416,
+    initial_filters: int = 32,
+    verbose: int = 0,
+    return_model: bool = False,
+):
+    class_labels = config.CLASS_LABELS if not class_labels else class_labels
 
-    input_shape = (3, IMAGE_SIZE, IMAGE_SIZE)
+    input_shape = (3, image_size, image_size)
     model = YOLOv3(input_shape, num_classes, initial_filters)
     x = torch.randn(2, *input_shape)
     out = model(x)
 
-    assert out[0].shape == (2, 3, IMAGE_SIZE//32, IMAGE_SIZE//32, 5 + num_classes)
-    assert out[1].shape == (2, 3, IMAGE_SIZE//16, IMAGE_SIZE//16, 5 + num_classes)
-    assert out[2].shape == (2, 3, IMAGE_SIZE//8, IMAGE_SIZE//8, 5 + num_classes)
+    if return_model:
+        return model
+
+    assert out[0].shape == (2, 3, image_size//32, image_size//32, 5 + num_classes)
+    assert out[1].shape == (2, 3, image_size//16, image_size//16, 5 + num_classes)
+    assert out[2].shape == (2, 3, image_size//8, image_size//8, 5 + num_classes)
     print("YOLOv3 Test passed.\n"+"-"*15)
-    # model.summary(verbose=1)
+    model.summary(verbose=verbose)
     print("\n")
+
+if __name__ == "__main__":
+    test(verbose=1)

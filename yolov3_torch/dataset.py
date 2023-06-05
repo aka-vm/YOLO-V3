@@ -100,6 +100,7 @@ class YOLODataset(Dataset):
         return image, tuple(targets)
 
 def test(return_loader=False, plot=True):
+    # init
     anchors = config.ANCHORS
     transform = config.test_transforms
     transform = config.train_transforms
@@ -121,9 +122,10 @@ def test(return_loader=False, plot=True):
     scales = (13, 26, 52)
     scaled_anchors = scale_anchor_boxes(anchors, scales)
     data_loader = DataLoader(dataset=dataset, batch_size=1, shuffle=True)
+    # init completed
 
     if return_loader:
-        return data_loader
+        return data_loader, scaled_anchors,
 
     for img, bboxes in data_loader:    # bboxes is a tuple of 3 tensors
         boxes = []
