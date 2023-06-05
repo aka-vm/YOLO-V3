@@ -241,7 +241,25 @@ def test(
     out = model(x)
 
     if return_model:
-        return model
+        targets = []
+        anchors = torch.tensor(config.ANCHORS)
+        anchors = anchors * \
+            torch.reshape(torch.tensor(config.S), (3, 1, 1)).repeat(1, 3, 2)
+
+
+        for i, out_ in enumerate(out):
+            anchor_ = anchors[i].reshape(1, 3, 1, 1, 2)
+            target = out_.clone()
+            target[..., 0] = torch.sigmoid(target[..., 0]).round()
+            target[..., 1:3] = torch.sigmoid(target[..., 1:3])
+            target[..., 3:5] = torch.exp(target[..., 3:5]) * anchor_
+            label = torch.argmax(target[..., 5:], dim=-1)
+            label_ohe = torch.zeros_like(target[..., 5:]).scatter_(-1, label.unsqueeze(-1), 1)
+            target[..., 5:] = label_ohe
+
+            targets.append(target)
+
+        return model, out, targets, anchors
 
     assert out[0].shape == (2, 3, image_size//32, image_size//32, 5 + num_classes)
     assert out[1].shape == (2, 3, image_size//16, image_size//16, 5 + num_classes)

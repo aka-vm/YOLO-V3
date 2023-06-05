@@ -107,7 +107,7 @@ def test(return_loader=False, plot=True):
 
     dataset_path = config.DATASET_PATH
     csv_file = dataset_path / "train.csv"
-    csv_file = dataset_path / "100examples.csv"
+    csv_file = dataset_path / "8examples.csv"
     img_dir = dataset_path / "images"
     label_dir = dataset_path / "labels"
     annotations = pd.read_csv(csv_file)
@@ -148,7 +148,7 @@ def test(return_loader=False, plot=True):
         # print(objects)
         if plot:
             plot_image(img[0].permute(1, 2, 0).to("cpu"), boxes)
-        # break       # just for single testing
+        break       # just for single testing
 
 
 

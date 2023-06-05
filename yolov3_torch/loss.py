@@ -1,4 +1,8 @@
 """
+YoloV3 Loss Function for PyTorch
+
+=========================\n\n
+Devlog -
 I assume you're familiar with the paper. If not, please read it first.
 
 This was quite difficult to impliment.
@@ -129,3 +133,31 @@ class YoloLoss(nn.Module):
             + self.lambda_box   * box_loss
             + self.lambda_class * class_loss
         )
+
+def test(use_target=False):
+    """
+    #! TODO: dry run from model and data_loader through the loss function
+    """
+    import yolo3
+    _, outputs, targets, anchors = yolo3.test(return_model=True)
+
+    if not use_target:
+        outputs[0] = torch.rand_like(outputs[0])
+        outputs[1] = torch.rand_like(outputs[1])
+        outputs[2] = torch.rand_like(outputs[2])
+
+
+    loss_func = YoloLoss()
+    loss_1 = loss_func(outputs[0], targets[0], anchors[0])
+    loss_2 = loss_func(outputs[1], targets[1], anchors[1])
+    loss_3 = loss_func(outputs[2], targets[2], anchors[2])
+
+    print(loss_1, loss_2, loss_3)
+
+    # TODO 5: look if it is improved when target directly is used to create the prediction in test 2
+
+if __name__ == "__main__":
+    loss_1 = test()
+    loss_2 = test(use_target=True)
+
+    #! compare both losses
