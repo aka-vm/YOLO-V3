@@ -9,7 +9,10 @@ from colorsys import hsv_to_rgb
 
 import config
 
-def scale_anchor_boxes(anchor_boxes: list[list[tuple[float, float]]], output_scales=(13, 26, 52)):
+def scale_anchor_boxes(
+    anchor_boxes: list[list[tuple[float, float]]],
+    output_scales=(13, 26, 52)
+) -> torch.Tensor:
     """
     Process anchor boxes to be relative to the output frame size.
 
@@ -41,18 +44,42 @@ def scale_anchor_boxes(anchor_boxes: list[list[tuple[float, float]]], output_sca
 
     return anchor_boxes * output_scales
 
+def iou_wh(
+    boxes1_wh,
+    boxes2_wh
+) -> torch.Tensor:
+    """
+    Parameters:
+        boxes1_wh: list of shape (N, 2) or (2, ).
+        boxes2_wh: list of shape (N, 2) or (2, ).
 
-def iou_wh(boxes1_wh, boxes2_wh):
+    returns:
+        Intersection over Union of the two boxes.
+        shape: (N, ) or (1, )
+    """
     # Used to choose the best anchor box for a given bounding box
     intersection = torch.min(boxes1_wh, boxes2_wh).prod(axis=-1)
     union = boxes1_wh.prod(axis=-1) + boxes2_wh.prod(axis=-1) - intersection
 
     return intersection / union
 
-def iou_boxes(boxes1, boxes2, box_format="midpoint"):
+def iou_boxes(
+    boxes1: torch.Tensor,
+    boxes2: torch.Tensor,
+    box_format="midpoint"
+) -> torch.Tensor:
     # used to check how good pred box is wrt target box and calculate the loss
     # box_format: midpoint/corners
     """
+    Find the Intersection over Union of two sets of boxes, takes exact coordinates into account.
+
+    Parameters:
+        boxes1: Tensor of shape (N, 4) for the format (x, y, w, h) or (x1, y1, x2, y2)
+        boxes2: Tensor of shape (N, 4) for the format (x, y, w, h) or (x1, y1, x2, y2)
+
+    Returns:
+        Tensor of shape (N, 1) containing the IoU for each pair of boxes
+
     if box_format == "midpoint":
         boxes_n -> [x, y, w, h]
         bnx1 -> x - w/2
@@ -104,10 +131,16 @@ def iou_boxes(boxes1, boxes2, box_format="midpoint"):
 
     return intersection / union
 
-def non_max_suppression(bboxes, base_prob_threshold, iou_threshold, box_format="midpoint"):
+def non_max_suppression(
+    bboxes: list[list],
+    base_prob_threshold: float,
+    iou_threshold: float,
+    box_format="midpoint"
+) -> list[list]:
     """
     Parameters:
-        bboxes: list[list]] -> shape([N, ..., S, S, 6]) [prob, x, y, w, h, class]
+        bboxes: list of all bboxes, each bbox is a list of 6 elements.
+            midpoint -> [prob, x, y, w, h, class]; corners -> [prob, x1, y1, x2, y2, class]
         base_prob_threshold: float -> threshold for class confidence, if lower than this, discard.
         iou_threshold: float -> threshold for iou, if higher than this, discard. means that its the same pred.
         box_format: str -> "midpoint" or "corners"
@@ -123,7 +156,8 @@ def non_max_suppression(bboxes, base_prob_threshold, iou_threshold, box_format="
 
     while bboxes:
         best_bbox = bboxes.pop(0)
-        # Will remove all the bbox that have iou > iou_threshold with best_bbox; iou > iou_threshold probabally means that they are the same bbox.
+    # For Each iter, this will remove all the bbox that have iou > iou_threshold with best_bbox;
+    # iou > iou_threshold probabally means that they are the same bbox.
 
         bboxes = [
             bbox
@@ -140,7 +174,12 @@ def non_max_suppression(bboxes, base_prob_threshold, iou_threshold, box_format="
 
     return final_bboxes
 
-def cells_to_bboxes(predictions, anchors, S, is_preds=True):
+def cells_to_bboxes(
+    predictions,
+    anchors,
+    S,
+    is_preds=True
+):
     """
     Model Output to a gernalized format for all the anchors.
 
