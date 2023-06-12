@@ -1,7 +1,10 @@
 import torch
 from torch import nn
+from torch import optim
+from torch.utils.data import DataLoader
 
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import random
@@ -9,9 +12,9 @@ from colorsys import hsv_to_rgb
 
 import config
 
-def scale_anchor_boxes(
+def format_anchor_boxes(
     anchor_boxes: list[list[tuple[float, float]]],
-    output_scales=(13, 26, 52)
+    output_scales: list
 ) -> torch.Tensor:
     """
     Process anchor boxes to be relative to the output frame size.
@@ -284,6 +287,90 @@ def generate_unique_colors(n, saturation_range=(0.4, 1), lightness_range=(0.3, 1
         colors.append(rgb_color)
 
     return colors
+
+
+def get_dataloaders(
+    train_csv_path: str = None,
+    test_csv_path: str = None,
+    train_val_split: float=0.2,
+    **kwargs
+) -> dict[str, DataLoader]:
+    from dataset import YOLODataset
+
+    dataset_path = config.DATASET_PATH
+    train_csv_path = train_csv_path or dataset_path / "train.csv"
+    train_csv_path = test_csv_path or dataset_path / "test.csv"
+    img_dir = config.IMAGES_DIR
+    label_dir = config.LABELS_DIR
+
+    anchors             = kwargs.get("anchors", config.ANCHORS)
+    num_classes         = kwargs.get("num_classes", config.NUM_CLASSES)
+    train_transforms    = kwargs.get("train_transforms", config.train_transforms)
+    test_transforms     = kwargs.get("test_transforms", config.test_transforms)
+
+    train_csv = pd.read_csv(train_csv_path)
+    val_csv = train_csv.sample(frac=train_val_split)
+
+    train_dataset = YOLODataset(
+        train_csv,
+        img_dir,
+        label_dir,
+        anchors,
+        C=num_classes,
+        transform=train_transforms,
+        **kwargs
+    )
+    test_dataset = YOLODataset(
+        test_csv_path,
+        img_dir,
+        label_dir,
+        anchors,
+        C=num_classes,
+        transform=test_transforms,
+        **kwargs
+    )
+    val_dataset = YOLODataset(
+        val_csv,
+        img_dir,
+        label_dir,
+        anchors,
+        C=num_classes,
+        transform=test_transforms,
+        **kwargs
+    )
+
+    train_loader = DataLoader(
+        dataset=train_dataset,
+        batch_size=config.BATCH_SIZE,
+        num_workers=config.NUM_WORKERS,
+        pin_memory=config.PIN_MEMORY,
+        shuffle=True,
+        drop_last=False
+    )
+    test_loader = DataLoader(
+        dataset=test_dataset,
+        batch_size=config.BATCH_SIZE,
+        num_workers=config.NUM_WORKERS,
+        pin_memory=config.PIN_MEMORY,
+        shuffle=False,
+        drop_last=False
+    )
+    val_loader = DataLoader(
+        dataset=val_dataset,
+        batch_size=config.BATCH_SIZE,
+        num_workers=config.NUM_WORKERS,
+        pin_memory=config.PIN_MEMORY,
+        shuffle=False,
+        drop_last=False,
+    )
+
+    data_loaders = {
+        "train": train_loader,
+        "test": test_loader,
+        "val": val_loader
+    }
+
+    return data_loaders
 
 
 class MaxPoolStride1(nn.Module):

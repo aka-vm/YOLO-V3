@@ -34,7 +34,9 @@ class YOLODataset(Dataset):
         transform=None,
         ignore_iou_thresh = 0.5
     ):
-        self.annotations = pd.read_csv(csv_file)
+        if not isinstance(csv_file, pd.DataFrame):
+            csv_file = pd.read_csv(csv_file)
+        self.annotations = csv_file
         self.img_dir = img_dir
         self.label_dir = label_dir
         self.transform = transform
@@ -108,8 +110,8 @@ def test(return_loader=False, plot=True):
     dataset_path = config.DATASET_PATH
     csv_file = dataset_path / "train.csv"
     csv_file = dataset_path / "8examples.csv"
-    img_dir = dataset_path / "images"
-    label_dir = dataset_path / "labels"
+    img_dir = config.IMAGES_DIR
+    label_dir = config.LABELS_DIR
     annotations = pd.read_csv(csv_file)
 
     dataset = YOLODataset(
