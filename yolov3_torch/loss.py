@@ -123,7 +123,7 @@ class YoloLoss(nn.Module):
         # Class Loss #! check src
         class_loss = self.ce(
             prediction[..., 5:][obj],
-            target    [..., 5:][obj],
+            target    [..., 5][obj].long(),
         )
 
 

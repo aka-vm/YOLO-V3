@@ -299,7 +299,7 @@ def get_dataloaders(
 
     dataset_path = config.DATASET_PATH
     train_csv_path = train_csv_path or dataset_path / "train.csv"
-    train_csv_path = test_csv_path or dataset_path / "test.csv"
+    test_csv_path = test_csv_path or dataset_path / "test.csv"
     img_dir = config.IMAGES_DIR
     label_dir = config.LABELS_DIR
 

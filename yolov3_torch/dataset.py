@@ -14,7 +14,7 @@ import config
 from utils import (
     cells_to_bboxes,
     iou_wh,
-    scale_anchor_boxes,
+    format_anchor_boxes,
     non_max_suppression as nms,
     plot_image
 )
@@ -122,7 +122,7 @@ def test(return_loader=False, plot=True):
         transform=transform
     )
     scales = (13, 26, 52)
-    scaled_anchors = scale_anchor_boxes(anchors, scales)
+    scaled_anchors = format_anchor_boxes(anchors, scales)
     data_loader = DataLoader(dataset=dataset, batch_size=1, shuffle=True)
     # init completed
 

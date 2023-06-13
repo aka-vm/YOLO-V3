@@ -249,13 +249,13 @@ def test(
 
         for i, out_ in enumerate(out):
             anchor_ = anchors[i].reshape(1, 3, 1, 1, 2)
-            target = out_.clone()
+            target = torch.zeros_like(out_[..., :6])
+            # target = out_.clone()
             target[..., 0] = torch.sigmoid(target[..., 0]).round()
             target[..., 1:3] = torch.sigmoid(target[..., 1:3])
             target[..., 3:5] = torch.exp(target[..., 3:5]) * anchor_
-            label = torch.argmax(target[..., 5:], dim=-1)
-            label_ohe = torch.zeros_like(target[..., 5:]).scatter_(-1, label.unsqueeze(-1), 1)
-            target[..., 5:] = label_ohe
+            label = torch.argmax(out_[..., 5:], dim=-1)
+            target[..., 5] = label
 
             targets.append(target)
 
