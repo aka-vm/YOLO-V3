@@ -11,6 +11,7 @@ Pytorch implimentation of YOLO-V3.
 | ----------- | ----------- |
 | Base Model Code              | ✅ |
 | Model Boilerplate            | ✅ |
+| Working Training Loop  | ✅ |
 | Training on Pascal Voc Data  | 🟡 |
 | Training on MS-COCO Data     | ❌ |
 | Exporting as Reuseable Model | ❌ |
